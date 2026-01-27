@@ -5,7 +5,7 @@ interface FormInputProps {
   placeholder?: string;
   value: string | number;
   onChange: (value: string | number) => void;
-  type?: 'text' | 'number' | 'email' | 'time';
+  type?: 'text' | 'number' | 'email' | 'time' |'password';
   error?: string;
 }
 

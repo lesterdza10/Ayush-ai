@@ -124,6 +124,13 @@ export default function Home() {
             >
               View Sample Dashboard
             </Button>
+            <Button
+              size="lg"
+              variant="third"
+              onClick={() => router.push('/login')}
+              >
+                Login
+            </Button>
           </div>
         </motion.div>
 

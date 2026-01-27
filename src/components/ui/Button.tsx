@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 interface ButtonProps {
   children: React.ReactNode;
   onClick?: () => void;
-  variant?: 'primary' | 'secondary' | 'danger';
+  variant?: 'primary' | 'secondary' | 'danger' | 'third';
   disabled?: boolean;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
@@ -24,6 +24,7 @@ export const Button: React.FC<ButtonProps> = ({
     primary: 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:shadow-lg hover:shadow-cyan-400/50 dark:from-cyan-600 dark:to-blue-600 dark:hover:shadow-cyan-500/50',
     secondary: 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:shadow-lg hover:shadow-cyan-400/50 dark:from-cyan-600 dark:to-blue-600 dark:hover:shadow-cyan-500/50',
     danger: 'bg-red-500/80 text-white hover:bg-red-600 hover:shadow-lg hover:shadow-red-400/50',
+    third: 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-lg hover:shadow-purple-400/50 dark:from-purple-600 dark:to-pink-600 dark:hover:shadow-purple-500/50',
   };
 
   const sizeStyles = {
