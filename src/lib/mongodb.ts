@@ -16,3 +16,7 @@ export const connectToDatabase = async () => {
     console.error("MongoDB connection error:", error);
   }
 };
+
+// Add this inside connectToDatabase
+console.log("Attempting to connect with URI:", MONGODB_URI.split('@')[1]); 
+// This logs the cluster part but hides your password
