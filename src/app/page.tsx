@@ -6,9 +6,26 @@ import { Leaf, Zap, Brain, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { GlassmorphismCard } from '@/components/ui/GlassmorphismCard';
 import { DarkModeToggle } from '@/components/ui/DarkModeToggle';
+import { useEffect, useState } from 'react';
 
 export default function Home() {
   const router = useRouter();
+  const [userInitial, setInitial] = useState('');
+
+  // Inside your Navbar or Home component
+useEffect(() => {
+  const getInitial = async () => {
+    const userId = localStorage.getItem('userId'); // Ensure you save this on login
+    if (!userId) return;
+
+    const res = await fetch(`/api/users/profile?userId=${userId}`);
+    if (res.ok) {
+      const data = await res.json();
+      setInitial(data.name.charAt(0).toUpperCase());
+    }
+  };
+  getInitial();
+}, []);
 
   const features = [
     {
@@ -63,6 +80,13 @@ export default function Home() {
           onClick={() => router.push("/calender")}>
           Calendar
         </Button>
+        <button
+        onClick={() => router.push('/profile-view')} // We'll name the view page /profile-view to avoid conflict
+        className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-lg hover:ring-2 ring-cyan-400 transition-all"
+        title="View Profile"
+      >
+        {userInitial}
+      </button>
       </div>
       {/* Animated Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
