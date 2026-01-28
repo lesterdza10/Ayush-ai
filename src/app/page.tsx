@@ -56,8 +56,13 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-cyan-50/50 via-blue-50/30 to-green-50/50 dark:from-slate-950 dark:via-slate-900/50 dark:to-slate-900/30 overflow-hidden transition-colors duration-300">
       {/* Dark Mode Toggle */}
-      <div className="fixed top-6 right-6 z-50">
+      <div className="fixed top-6 right-6 z-50 flex gap-4 items-center">
         <DarkModeToggle />
+        <Button
+          variant='secondary'
+          onClick={() => router.push("/calender")}>
+          Calendar
+        </Button>
       </div>
       {/* Animated Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
