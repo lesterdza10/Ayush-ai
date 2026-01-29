@@ -138,7 +138,7 @@ export default function DashboardPage() {
         <Button 
           variant="secondary" 
           size="sm"
-          onClick={() => router.push('/')}
+          onClick={() => router.push('/home')}
         >
           <Home className="w-4 h-4 mr-2" />
           Home

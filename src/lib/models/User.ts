@@ -4,7 +4,6 @@ const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  // This will store all the form data
   profile: {
     age: Number,
     gender: String,
