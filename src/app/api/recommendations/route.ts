@@ -1,18 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateAyurvedicRecommendations } from '@/lib/ayurvedicRecommendations';
+import { generateRecommendationsWithGemini, generateAyurvedicRecommendations } from '@/lib/geminiRecommendations';
 
 export async function POST(request: NextRequest) {
   try {
     const profileData = await request.json();
 
-    // Generate recommendations using local Ayurvedic engine (no API needed!)
-    const recommendations = generateAyurvedicRecommendations(profileData);
+    // Attempt to generate recommendations using Gemini AI
+    try {
+      const recommendations = await generateRecommendationsWithGemini(profileData);
 
-    return NextResponse.json({
-      success: true,
-      recommendations: recommendations,
-      timestamp: new Date().toISOString(),
-    });
+      return NextResponse.json({
+        success: true,
+        recommendations: recommendations,
+        timestamp: new Date().toISOString(),
+        source: 'gemini-ai',
+      });
+    } catch (geminiError) {
+      console.error('Gemini API Error:', geminiError);
+      console.log('Falling back to local recommendations...');
+
+      // Fallback to local recommendations if Gemini fails
+      const recommendations = generateAyurvedicRecommendations(profileData);
+
+      return NextResponse.json({
+        success: true,
+        recommendations: recommendations,
+        timestamp: new Date().toISOString(),
+        source: 'fallback-local',
+      });
+    }
   } catch (error) {
     console.error('Recommendation Generation Error:', error);
     const errorMessage =

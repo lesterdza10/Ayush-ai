@@ -31,7 +31,12 @@ export function StreamingRecommendations({
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
+          let errorData;
+          try {
+            errorData = await response.json();
+          } catch {
+            errorData = { error: `HTTP ${response.status}` };
+          }
           throw new Error(
             errorData.details || errorData.error || 'Failed to generate recommendations'
           );
@@ -71,8 +76,10 @@ export function StreamingRecommendations({
           Make sure you have added your Gemini API key to .env.local:
           <br />
           <code className="bg-red-100 dark:bg-red-800 px-2 py-1 rounded">
-            NEXT_PUBLIC_GEMINI_API_KEY=your-api-key
+            GEMINI_API_KEY=your-gemini-api-key
           </code>
+          <br />
+          Get your key at: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="underline">https://aistudio.google.com/apikey</a>
         </p>
       </motion.div>
     );

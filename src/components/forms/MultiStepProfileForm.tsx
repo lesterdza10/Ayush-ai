@@ -6,7 +6,7 @@ import { FormInput } from '@/components/ui/FormInput';
 import { FormSelect } from '@/components/ui/FormSelect';
 import { FormSlider } from '@/components/ui/FormSlider';
 import { Button } from '@/components/ui/Button';
-import { StreamingRecommendations } from '@/components/ui/StreamingRecommendations';
+import { AiChat } from '@/components/ui/AiChat';
 
 export interface ProfileData {
   // Step 1
@@ -78,6 +78,26 @@ export const MultiStepProfileForm: React.FC<MultiStepProfileFormProps> = ({ onSu
     doshaAnswers: Array(doshaQuestions.length).fill(false),
   });
 
+  // Calculate dosha from answers
+  const calculateDosha = (answers: boolean[]) => {
+    const vataQuestions = [0, 1, 4, 5, 10];
+    const pittaQuestions = [2, 3, 8, 11];
+    const kaphaQuestions = [1, 5, 6, 7, 9];
+
+    const vataScore = vataQuestions.filter((i) => answers[i]).length;
+    const pittaScore = pittaQuestions.filter((i) => answers[i]).length;
+    const kaphaScore = kaphaQuestions.filter((i) => answers[i]).length;
+
+    const total = vataScore + pittaScore + kaphaScore;
+
+    return {
+      vata: total > 0 ? Math.round((vataScore / total) * 100) : 33,
+      pitta: total > 0 ? Math.round((pittaScore / total) * 100) : 33,
+      kapha: total > 0 ? Math.round((kaphaScore / total) * 100) : 34,
+    };
+  };
+
+  const dosha = calculateDosha(formData.doshaAnswers);
   const handleInputChange = (field: keyof ProfileData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -358,35 +378,41 @@ export const MultiStepProfileForm: React.FC<MultiStepProfileFormProps> = ({ onSu
               <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-400 dark:to-blue-400 bg-clip-text text-transparent mb-2">
                 Your AI Health Analysis
               </h1>
-              <p className="text-gray-600 dark:text-gray-400">Powered by Google Gemini</p>
+              <p className="text-gray-600 dark:text-gray-400">Chat with AI about your health</p>
             </motion.div>
 
-            <StreamingRecommendations
-              profileData={formData}
-              onComplete={(recommendations) => {
-                // Save recommendations to localStorage
-                localStorage.setItem(
-                  'recommendations',
-                  JSON.stringify({
-                    data: formData,
-                    recommendations,
-                    timestamp: new Date().toISOString(),
-                  })
-                );
-                // Call onSubmit after recommendations are generated
-                onSubmit(formData);
-              }}
-            />
+            <div className="h-96">
+              <AiChat
+                profileData={{
+                  ...formData,
+                  vata: dosha.vata,
+                  pitta: dosha.pitta,
+                  kapha: dosha.kapha,
+                }}
+              />
+            </div>
 
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.8 }}
-              onClick={() => setShowRecommendations(false)}
-              className="w-full px-6 py-3 rounded-lg bg-gray-200 dark:bg-slate-700 text-gray-900 dark:text-white font-semibold hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors"
-            >
-              ← Edit Profile
-            </motion.button>
+            <div className="flex flex-col md:flex-row gap-3">
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.8 }}
+                onClick={() => setShowRecommendations(false)}
+                className="w-full px-6 py-3 rounded-lg bg-gray-200 dark:bg-slate-700 text-gray-900 dark:text-white font-semibold hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors"
+              >
+                ← Edit Profile
+              </motion.button>
+
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.0 }}
+                onClick={() => onSubmit(formData)}
+                className="w-full px-6 py-3 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold hover:from-cyan-600 hover:to-blue-600 transition-colors"
+              >
+                Go to Dashboard →
+              </motion.button>
+            </div>
           </motion.div>
         ) : (
           // Form View
