@@ -21,32 +21,23 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user, account }) {
-      // Skip database operations during build time
-      if (typeof window === 'undefined' && !process.env.MONGODB_URI) {
-        return token;
-      }
+      if (user && account && user.email) {
+        const storedUser = await upsertUser({
+          email: user.email,
+          name: user.name ?? null,
+          image: user.image ?? null,
+          provider: account.provider,
+          providerAccountId: account.providerAccountId,
+        });
 
-      try {
-        if (user && account && user.email) {
-          const storedUser = await upsertUser({
-            email: user.email,
-            name: user.name ?? null,
-            image: user.image ?? null,
-            provider: account.provider,
-            providerAccountId: account.providerAccountId,
-          });
-
-          if (storedUser._id) {
-            token.userId = storedUser._id.toString();
-          }
-        } else if (!token.userId && token.email) {
-          const existingUser = await getUserByEmail(token.email);
-          if (existingUser?._id) {
-            token.userId = existingUser._id.toString();
-          }
+        if (storedUser._id) {
+          token.userId = storedUser._id.toString();
         }
-      } catch (error) {
-        console.error('JWT callback error:', error);
+      } else if (!token.userId && token.email) {
+        const existingUser = await getUserByEmail(token.email);
+        if (existingUser?._id) {
+          token.userId = existingUser._id.toString();
+        }
       }
 
       return token;
