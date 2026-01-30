@@ -145,8 +145,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error saving profile:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to save profile';
     return NextResponse.json(
-      { error: 'Failed to save profile' },
+      { error: 'Failed to save profile', message: errorMessage },
       { status: 500 }
     );
   }
@@ -168,8 +169,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: serializeProfile(profile) });
   } catch (error) {
     console.error('Error fetching profile:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch profile';
     return NextResponse.json(
-      { error: 'Failed to fetch profile' },
+      { error: 'Failed to fetch profile', message: errorMessage },
       { status: 500 }
     );
   }
