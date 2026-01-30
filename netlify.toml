@@ -5,6 +5,12 @@
   command = "npm run build"
   publish = ".next"
 
+[build.environment]
+  # Placeholder values for build time (won't be used at runtime)
+  GOOGLE_CLIENT_ID = "build-time-placeholder"
+  GOOGLE_CLIENT_SECRET = "build-time-placeholder"
+  NEXTAUTH_SECRET = "build-time-placeholder"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
