@@ -88,7 +88,7 @@ export default function Home() {
         <Button
           variant='secondary'
           size="sm"
-          onClick={() => router.push("/calendar")}
+          onClick={() => router.push("/calender")}
           className="flex gap-2 items-center"
         >
           <Calendar className="w-4 h-4" />
@@ -146,7 +146,7 @@ export default function Home() {
             <Button
               size="lg"
               variant="secondary"
-              onClick={() => router.push('/profile-view')}
+              onClick={() => router.push('/dashboard')}
             >
               Go to Dashboard
             </Button>

@@ -8,29 +8,19 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
-    if (!userId || userId === 'undefined') {
-      return NextResponse.json({ error: 'Valid userId required' }, { status: 400 });
-    }
+    if (!userId) return NextResponse.json({ error: 'Valid ID required' }, { status: 400 });
 
-    // .lean() makes the document a plain JavaScript object
     const user = await User.findById(userId).lean();
-    
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+    if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    // WE PULL DATA DIRECTLY FROM THE DATABASE
-    // This merges user.email + user.name + everything inside user.profile
-    const completeProfile = {
-      name: user.name || 'User',
-      email: user.email || '',
+    // Combine top-level fields (name, email) with the nested profile fields
+    return NextResponse.json({
+      name: user.name,
+      email: user.email,
       ...(user.profile || {}) 
-    };
-
-    return NextResponse.json(completeProfile, { status: 200 });
+    }, { status: 200 });
   } catch (error) {
-    console.error("API GET Error:", error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: 'Fetch failed' }, { status: 500 });
   }
 }
 
@@ -42,7 +32,6 @@ export async function POST(request: NextRequest) {
 
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
 
-    // This saves the form data into the database 'profile' object
     await User.findByIdAndUpdate(
       userId,
       { $set: { profile: { ...profileData, updatedAt: new Date() } } },
