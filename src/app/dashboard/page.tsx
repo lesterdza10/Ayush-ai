@@ -234,9 +234,9 @@ export default function DashboardPage() {
     return items;
   }, [profile, healthScores]);
 
-  if (loading || status === 'unauthenticated') {
+  if (loading || status === 'unauthenticated' || !profile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-cyan-50/50 via-blue-50/30 to-green-50/50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-cyan-50/50 via-blue-50/30 to-green-50/50 dark:from-slate-950 dark:via-slate-900/50 dark:to-slate-900/30 flex items-center justify-center">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
@@ -244,10 +244,6 @@ export default function DashboardPage() {
         />
       </div>
     );
-  }
-
-  if (!profile) {
-    return null;
   }
 
   const doshaData = [
