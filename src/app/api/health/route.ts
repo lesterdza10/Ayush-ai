@@ -1,61 +1,49 @@
+import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { authOptions } from '@/lib/auth/options';
+import { getHealthMetricsByUserId, upsertHealthMetrics } from '@/lib/models/services';
 
-// Mock health metrics calculation - MongoDB integration can be added later
+const healthSchema = z.object({
+  digestScore: z.number().min(0).max(100),
+  sleepScore: z.number().min(0).max(100),
+  stressScore: z.number().min(0).max(100),
+  fitnessScore: z.number().min(0).max(100),
+  gastricRisk: z.enum(['low', 'medium', 'high']),
+  obesityRisk: z.enum(['low', 'medium', 'high']),
+  diabetesRisk: z.enum(['low', 'medium', 'high']),
+});
+
+function serializeMetrics(metrics: Awaited<ReturnType<typeof upsertHealthMetrics>>) {
+  return {
+    ...metrics,
+    _id: metrics._id?.toString(),
+    userId: metrics.userId.toString(),
+    recordedAt: metrics.recordedAt.toISOString(),
+    updatedAt: metrics.updatedAt.toISOString(),
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const {
-      userId,
-      doshaVata,
-      doshaPitta,
-      doshaKapha,
-      digestScore,
-      sleepScore,
-      stressScore,
-      fitnessScore,
-      gastricRisk,
-      obesityRisk,
-      diabetesRisk,
-    } = body;
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    // Validate required fields
-    if (
-      !userId ||
-      doshaVata === undefined ||
-      doshaPitta === undefined ||
-      doshaKapha === undefined
-    ) {
+    const body = await request.json();
+    const parsed = healthSchema.safeParse(body);
+
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Invalid health metrics payload', details: parsed.error.flatten() },
         { status: 400 }
       );
     }
 
-    // Mock response - in production, save to MongoDB
-    const mockMetrics = {
-      userId,
-      doshaVata,
-      doshaPitta,
-      doshaKapha,
-      digestScore,
-      sleepScore,
-      stressScore,
-      fitnessScore,
-      gastricRisk,
-      obesityRisk,
-      diabetesRisk,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    const metrics = await upsertHealthMetrics(session.user.id, parsed.data);
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'Health metrics saved successfully',
-        data: mockMetrics,
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({ success: true, data: serializeMetrics(metrics) });
   } catch (error) {
     console.error('Error saving health metrics:', error);
     return NextResponse.json(
@@ -67,34 +55,18 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'userId is required' },
-        { status: 400 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Mock response - in production, fetch from MongoDB
-    const mockMetrics = {
-      userId,
-      doshaVata: 35,
-      doshaPitta: 40,
-      doshaKapha: 25,
-      digestScore: 75,
-      sleepScore: 65,
-      stressScore: 70,
-      fitnessScore: 80,
-      gastricRisk: 'low',
-      obesityRisk: 'medium',
-      diabetesRisk: 'low',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    const metrics = await getHealthMetricsByUserId(session.user.id);
 
-    return NextResponse.json(mockMetrics, { status: 200 });
+    if (!metrics) {
+      return NextResponse.json({ data: null }, { status: 200 });
+    }
+
+    return NextResponse.json({ data: serializeMetrics(metrics) });
   } catch (error) {
     console.error('Error fetching health metrics:', error);
     return NextResponse.json(

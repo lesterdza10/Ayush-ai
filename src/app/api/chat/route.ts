@@ -1,5 +1,9 @@
+import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { authOptions } from '@/lib/auth/options';
+import { createChatSession, getProfileByUserId } from '@/lib/models/services';
+import { ChatMessageDocument } from '@/lib/models';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -27,6 +31,11 @@ If the user has provided their health profile, use that information to give pers
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { messages, profileData } = (await request.json()) as ChatRequest;
 
     if (!messages || messages.length === 0) {
@@ -69,6 +78,21 @@ export async function POST(request: NextRequest) {
     });
 
     const assistantMessage = response.response.text();
+
+    const messagesWithAssistant: ChatMessage[] = [
+      ...messages,
+      { role: 'assistant', content: assistantMessage },
+    ];
+
+    const messagesToPersist: ChatMessageDocument[] = messagesWithAssistant.map((msg) => ({
+      role: msg.role,
+      content: msg.content,
+      createdAt: new Date(),
+    }));
+
+    const profileSnapshot = await getProfileByUserId(session.user.id);
+
+    await createChatSession(session.user.id, messagesToPersist, profileSnapshot ?? undefined);
 
     return NextResponse.json({
       success: true,

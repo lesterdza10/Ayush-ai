@@ -1,99 +1,240 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Heart, Moon, Brain, Zap, AlertCircle, Leaf, Droplets, Activity, Home } from 'lucide-react';
+import { Home, Sparkles } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { GlassmorphismCard } from '@/components/ui/GlassmorphismCard';
 import { HealthScoreCard } from '@/components/ui/HealthScoreCard';
 import { RiskIndicatorCard } from '@/components/ui/RiskIndicatorCard';
 import { Button } from '@/components/ui/Button';
 import { DarkModeToggle } from '@/components/ui/DarkModeToggle';
-import { ProfileData } from '@/components/forms/MultiStepProfileForm';
 
-interface DashboardData {
+type RiskLevel = 'low' | 'medium' | 'high';
+
+interface ProfileDocument {
+  _id?: string;
+  userId: string;
+  name: string;
+  age: number;
+  gender: string;
+  height: number;
+  weight: number;
+  location: string;
+  bodyType: string;
+  appetite: string;
+  digestion: string;
+  sleepQuality: number;
+  stressLevel: number;
+  wakeUpTime: string;
+  sleepTime: string;
+  exercise: string;
+  foodType: string;
+  junkFoodFreq: string;
+  waterIntake: number;
+  doshaAnswers: boolean[];
   dosha: {
     vata: number;
     pitta: number;
     kapha: number;
   };
-  healthScores: {
-    digestion: number;
-    sleep: number;
-    stress: number;
-    fitness: number;
-  };
-  riskIndicators: {
-    gastric: { level: 'low' | 'medium' | 'high'; percentage: number };
-    obesity: { level: 'low' | 'medium' | 'high'; percentage: number };
-    diabetes: { level: 'low' | 'medium' | 'high'; percentage: number };
-  };
-  suggestions: Array<{
-    icon: string;
-    text: string;
-    category: string;
-  }>;
+  createdAt: string;
+  updatedAt: string;
 }
+
+interface HealthMetricsDocument {
+  digestScore: number;
+  sleepScore: number;
+  stressScore: number;
+  fitnessScore: number;
+  gastricRisk: RiskLevel;
+  obesityRisk: RiskLevel;
+  diabetesRisk: RiskLevel;
+  recordedAt: string;
+  updatedAt: string;
+}
+
+interface RecommendationDocument {
+  content: string;
+  source: 'gemini-ai' | 'fallback-local';
+  createdAt: string;
+}
+
+interface Suggestion {
+  icon: string;
+  text: string;
+  category: string;
+}
+
+const doshaColors = {
+  Vata: '#06b6d4',
+  Pitta: '#f59e0b',
+  Kapha: '#10b981',
+};
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const { status } = useSession();
+  const [profile, setProfile] = useState<ProfileDocument | null>(null);
+  const [metrics, setMetrics] = useState<HealthMetricsDocument | null>(null);
+  const [recommendation, setRecommendation] = useState<RecommendationDocument | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const storedProfile = localStorage.getItem('userProfile');
-    if (!storedProfile) {
-      router.push('/profile');
+    if (status === 'unauthenticated') {
+      router.replace('/');
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    if (status !== 'authenticated') {
       return;
     }
 
-    const profileData = JSON.parse(storedProfile) as ProfileData;
-    setProfile(profileData);
+    let isMounted = true;
 
-    // Mock calculation of health metrics
-    const mockDashboardData: DashboardData = {
-      dosha: {
-        vata: 35,
-        pitta: 40,
-        kapha: 25,
-      },
-      healthScores: {
-        digestion: Math.min(100, Math.max(40, 70 + (10 - profileData.stressLevel) * 2)),
-        sleep: Math.min(100, Math.max(30, profileData.sleepQuality * 10)),
-        stress: Math.min(100, Math.max(20, (10 - profileData.stressLevel) * 8)),
-        fitness: Math.min(100, Math.max(50, profileData.exercise === 'daily' ? 90 : profileData.exercise === '4x/week' ? 75 : 60)),
-      },
-      riskIndicators: {
-        gastric: {
-          level: profileData.digestion === 'excellent' ? 'low' : profileData.digestion === 'normal' ? 'medium' : 'high',
-          percentage: profileData.digestion === 'excellent' ? 20 : profileData.digestion === 'normal' ? 45 : 70,
-        },
-        obesity: {
-          level: profileData.bodyType === 'slim' ? 'low' : profileData.bodyType === 'athletic' ? 'low' : 'high',
-          percentage: profileData.bodyType === 'slim' ? 15 : profileData.bodyType === 'athletic' ? 25 : 65,
-        },
-        diabetes: {
-          level: profileData.exercise === 'daily' ? 'low' : profileData.exercise === 'none' ? 'high' : 'medium',
-          percentage: profileData.exercise === 'daily' ? 10 : profileData.exercise === 'none' ? 60 : 35,
-        },
-      },
-      suggestions: [
-        { icon: '🧘', text: 'Practice meditation 10 minutes daily for stress relief', category: 'wellness' },
-        { icon: '🚴', text: `Increase exercise frequency - currently ${profileData.exercise || 'none'}`, category: 'fitness' },
-        { icon: '💧', text: `Increase water intake - aim for 2-3 liters daily (current: ${profileData.waterIntake}L)`, category: 'hydration' },
-        { icon: '🛌', text: 'Maintain consistent sleep schedule - current window 10 PM to 6 AM', category: 'sleep' },
-        { icon: '🥗', text: 'Add more leafy greens and whole grains to your diet', category: 'nutrition' },
-        { icon: '⏰', text: 'Avoid heavy meals 2 hours before bedtime', category: 'digestion' },
-      ],
+    const fetchJson = async <T,>(url: string): Promise<T> => {
+      const response = await fetch(url, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload?.error || `Failed to fetch ${url}`);
+      }
+
+      return response.json();
     };
 
-    setDashboardData(mockDashboardData);
-    setLoading(false);
-  }, [router]);
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  if (loading || !profile || !dashboardData) {
+        const profilePayload = await fetchJson<{ data: ProfileDocument | null }>('/api/users');
+
+        if (!profilePayload.data) {
+          router.replace('/profile');
+          return;
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        setProfile(profilePayload.data);
+
+        const [metricsPayload, recommendationPayload] = await Promise.all([
+          fetchJson<{ data: HealthMetricsDocument | null }>('/api/health'),
+          fetchJson<{ data: RecommendationDocument | null }>('/api/recommendations'),
+        ]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setMetrics(metricsPayload.data ?? null);
+        setRecommendation(recommendationPayload.data ?? null);
+      } catch (err) {
+        if (!isMounted) {
+          return;
+        }
+        const message = err instanceof Error ? err.message : 'Failed to load dashboard';
+        setError(message);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    load();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [status, router]);
+
+  const healthScores = useMemo(() => {
+    if (!profile) {
+      return {
+        digestion: metrics?.digestScore ?? 60,
+        sleep: metrics?.sleepScore ?? 60,
+        stress: metrics?.stressScore ?? 60,
+        fitness: metrics?.fitnessScore ?? 60,
+      };
+    }
+
+    return {
+      digestion: metrics?.digestScore ?? 60,
+      sleep: metrics?.sleepScore ?? profile.sleepQuality * 10,
+      stress: metrics?.stressScore ?? Math.max(20, (10 - profile.stressLevel) * 8),
+      fitness: metrics?.fitnessScore ?? 60,
+    };
+  }, [profile, metrics]);
+
+  const suggestions = useMemo<Suggestion[]>(() => {
+    if (!profile) {
+      return [];
+    }
+
+    const items: Suggestion[] = [];
+
+    if (healthScores.stress < 50) {
+      items.push({
+        icon: '🧘',
+        text: 'Dedicate 10 minutes daily to calming breathwork for stress balance.',
+        category: 'wellness',
+      });
+    }
+
+    if (profile.exercise === 'none' || healthScores.fitness < 60) {
+      items.push({
+        icon: '🚴',
+        text: 'Add three 30-minute movement sessions this week to rebuild stamina.',
+        category: 'fitness',
+      });
+    }
+
+    if (profile.waterIntake < 6) {
+      items.push({
+        icon: '💧',
+        text: `Increase hydration to at least 2.5L daily (current: ${profile.waterIntake}L).`,
+        category: 'hydration',
+      });
+    }
+
+    if (profile.sleepQuality < 7) {
+      items.push({
+        icon: '🛌',
+        text: 'Wind down by 10 PM with a warm herbal tea to lift sleep score.',
+        category: 'sleep',
+      });
+    }
+
+    if (profile.digestion !== 'excellent') {
+      items.push({
+        icon: '🥗',
+        text: 'Favor warm, lightly spiced meals to strengthen digestion.',
+        category: 'nutrition',
+      });
+    }
+
+    if (!items.length) {
+      items.push({
+        icon: '✨',
+        text: 'Great progress! Maintain your rhythm and check recommendations weekly.',
+        category: 'maintenance',
+      });
+    }
+
+    return items;
+  }, [profile, healthScores]);
+
+  if (loading || status === 'unauthenticated') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-cyan-50/50 via-blue-50/30 to-green-50/50 flex items-center justify-center">
         <motion.div
@@ -105,11 +246,31 @@ export default function DashboardPage() {
     );
   }
 
+  if (!profile) {
+    return null;
+  }
+
   const doshaData = [
-    { name: 'Vata', value: dashboardData.dosha.vata, color: '#06b6d4' },
-    { name: 'Pitta', value: dashboardData.dosha.pitta, color: '#f59e0b' },
-    { name: 'Kapha', value: dashboardData.dosha.kapha, color: '#10b981' },
+    { name: 'Vata', value: profile.dosha.vata, color: doshaColors.Vata },
+    { name: 'Pitta', value: profile.dosha.pitta, color: doshaColors.Pitta },
+    { name: 'Kapha', value: profile.dosha.kapha, color: doshaColors.Kapha },
   ];
+
+  const riskIndicators = {
+    gastric: {
+      level: metrics?.gastricRisk ?? (profile.digestion === 'excellent' ? 'low' : profile.digestion === 'normal' ? 'medium' : 'high'),
+      percentage: metrics?.gastricRisk === 'high' ? 70 : metrics?.gastricRisk === 'medium' ? 45 : 20,
+    },
+    obesity: {
+      level: metrics?.obesityRisk ?? (profile.bodyType === 'slim' ? 'low' : profile.bodyType === 'athletic' ? 'medium' : 'high'),
+      percentage: metrics?.obesityRisk === 'high' ? 65 : metrics?.obesityRisk === 'medium' ? 35 : 20,
+    },
+    diabetes: {
+      level: metrics?.diabetesRisk ?? (profile.exercise === 'daily' ? 'low' : profile.exercise === 'none' ? 'high' : 'medium'),
+      percentage: metrics?.diabetesRisk === 'high' ? 60 : metrics?.diabetesRisk === 'medium' ? 35 : 15,
+    },
+  };
+
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -133,10 +294,9 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-cyan-50/50 via-blue-50/30 to-green-50/50 dark:from-slate-950 dark:via-slate-900/50 dark:to-slate-900/30 p-6 md:p-12 transition-colors duration-300">
-      {/* Navigation Buttons */}
       <div className="fixed top-6 left-6 z-50">
-        <Button 
-          variant="secondary" 
+        <Button
+          variant="secondary"
           size="sm"
           onClick={() => router.push('/')}
         >
@@ -145,13 +305,17 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {/* Dark Mode Toggle */}
       <div className="fixed top-6 right-6 z-50">
         <DarkModeToggle />
       </div>
 
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {error && (
+          <div className="mb-6 rounded-xl border border-red-200 dark:border-red-800 bg-red-100/80 dark:bg-red-900/40 px-4 py-3 text-sm text-red-700 dark:text-red-200">
+            {error}
+          </div>
+        )}
+
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -164,12 +328,11 @@ export default function DashboardPage() {
             <p className="text-gray-700 dark:text-gray-300 mt-2">Your personalized AYUSH health insights</p>
           </div>
           <Button variant="secondary" onClick={() => router.push('/profile')} size="md">
-            Edit Profile
+            Update Profile
           </Button>
         </motion.div>
 
         <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-12">
-          {/* Dosha Breakdown */}
           <motion.div variants={itemVariants}>
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Your Dosha Constitution</h2>
             <GlassmorphismCard className="p-8">
@@ -223,70 +386,32 @@ export default function DashboardPage() {
             </GlassmorphismCard>
           </motion.div>
 
-          {/* Health Score Cards */}
           <motion.div variants={itemVariants}>
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Health Scores</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <HealthScoreCard
-                title="Digestion"
-                score={dashboardData.healthScores.digestion}
-                icon="🔥"
-                label="Digestive Power"
-              />
-              <HealthScoreCard
-                title="Sleep"
-                score={dashboardData.healthScores.sleep}
-                icon="😴"
-                label="Sleep Quality"
-              />
-              <HealthScoreCard
-                title="Stress"
-                score={dashboardData.healthScores.stress}
-                icon="🧘"
-                label="Mental Calm"
-              />
-              <HealthScoreCard
-                title="Fitness"
-                score={dashboardData.healthScores.fitness}
-                icon="💪"
-                label="Physical Strength"
-              />
+              <HealthScoreCard title="Digestion" score={Math.round(healthScores.digestion)} icon="🔥" label="Digestive Power" />
+              <HealthScoreCard title="Sleep" score={Math.round(healthScores.sleep)} icon="😴" label="Sleep Quality" />
+              <HealthScoreCard title="Stress" score={Math.round(healthScores.stress)} icon="🧘" label="Mental Calm" />
+              <HealthScoreCard title="Fitness" score={Math.round(healthScores.fitness)} icon="💪" label="Physical Strength" />
             </div>
           </motion.div>
 
-          {/* Risk Indicators */}
           <motion.div variants={itemVariants}>
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Health Risk Assessment</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <RiskIndicatorCard
-                title="Gastric Issues"
-                risk={dashboardData.riskIndicators.gastric.level}
-                percentage={dashboardData.riskIndicators.gastric.percentage}
-                icon="🫡"
-              />
-              <RiskIndicatorCard
-                title="Obesity Risk"
-                risk={dashboardData.riskIndicators.obesity.level}
-                percentage={dashboardData.riskIndicators.obesity.percentage}
-                icon="⚖️"
-              />
-              <RiskIndicatorCard
-                title="Diabetes Risk"
-                risk={dashboardData.riskIndicators.diabetes.level}
-                percentage={dashboardData.riskIndicators.diabetes.percentage}
-                icon="🩺"
-              />
+              <RiskIndicatorCard title="Gastric Issues" risk={riskIndicators.gastric.level} percentage={riskIndicators.gastric.percentage} icon="🫡" />
+              <RiskIndicatorCard title="Obesity Risk" risk={riskIndicators.obesity.level} percentage={riskIndicators.obesity.percentage} icon="⚖️" />
+              <RiskIndicatorCard title="Diabetes Risk" risk={riskIndicators.diabetes.level} percentage={riskIndicators.diabetes.percentage} icon="🩺" />
             </div>
           </motion.div>
 
-          {/* Suggestions Panel */}
           <motion.div variants={itemVariants}>
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Personalized Suggestions</h2>
             <GlassmorphismCard className="p-8">
               <div className="space-y-4 max-h-96 overflow-y-auto">
-                {dashboardData.suggestions.map((suggestion, index) => (
+                {suggestions.map((suggestion, index) => (
                   <motion.div
-                    key={index}
+                    key={`${suggestion.category}-${index}`}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
@@ -303,7 +428,22 @@ export default function DashboardPage() {
             </GlassmorphismCard>
           </motion.div>
 
-          {/* Footer Actions */}
+          {recommendation && (
+            <motion.div variants={itemVariants}>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+                <Sparkles className="w-6 h-6 text-cyan-500" />
+                Latest AI Recommendations
+              </h2>
+              <GlassmorphismCard className="p-8">
+                <div className="flex justify-between items-center mb-4 text-sm text-gray-600 dark:text-gray-400">
+                  <span>Source: {recommendation.source === 'gemini-ai' ? 'Gemini AI' : 'Local Ayurvedic Engine'}</span>
+                  <span>{new Date(recommendation.createdAt).toLocaleString()}</span>
+                </div>
+                <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">{recommendation.content}</pre>
+              </GlassmorphismCard>
+            </motion.div>
+          )}
+
           <motion.div variants={itemVariants} className="flex gap-4 justify-center">
             <Button variant="secondary" onClick={() => router.push('/profile')} size="lg">
               Update Profile
@@ -317,3 +457,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## AYUSH AI Platform
 
-## Getting Started
+Next.js 16 app delivering Ayurvedic health insights backed by AI, MongoDB, and Google OAuth login.
 
-First, run the development server:
+## Prerequisites
+
+- Node.js 20+
+- MongoDB cluster or Atlas connection string
+- Google Cloud OAuth client (Web application)
+
+## Environment Variables
+
+Create a `.env.local` file at the project root with the following keys:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+MONGODB_URI="mongodb+srv://<user>:<password>@<cluster>/"
+MONGODB_DB="ayush-ai"
+NEXTAUTH_SECRET="<random-32-char-string>"
+GOOGLE_CLIENT_ID="<google-oauth-client-id>"
+GOOGLE_CLIENT_SECRET="<google-oauth-client-secret>"
+GEMINI_API_KEY="<optional-gemini-key>"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- `MONGODB_URI` / `MONGODB_DB`: MongoDB connection target used by the API routes.
+- `NEXTAUTH_SECRET`: secret used by NextAuth for JWT signing.
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`: issued from Google Cloud Console (OAuth consent screen + credentials).
+- `GEMINI_API_KEY`: optional; enables Gemini-powered streaming recommendations. Without it the app falls back to the local rules engine.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Install & Run
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run dev
+```
 
-## Learn More
+Visit [http://localhost:3000](http://localhost:3000) and sign in with Google. Authenticated users land on the personalized dashboard; first-time users are guided through the multi-step profile creation flow.
 
-To learn more about Next.js, take a look at the following resources:
+## Key Features
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Google OAuth login with session persistence via NextAuth.
+- MongoDB-backed collections for users, profiles, health metrics, chat transcripts, and recommendations.
+- Multi-step Ayurvedic profile wizard with AI chat preview.
+- Dashboard that reads live data from the API and displays dosha breakdowns, health scores, risk indicators, and stored recommendations.

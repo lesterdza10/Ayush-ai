@@ -1,73 +1,148 @@
+import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { authOptions } from '@/lib/auth/options';
+import {
+  getProfileByUserId,
+  upsertHealthMetrics,
+  upsertProfile,
+  type HealthMetricsPayload,
+  type ProfilePayload,
+} from '@/lib/models/services';
 
-// Mock user profile endpoints - MongoDB integration can be added later
+const profileSchema = z.object({
+  name: z.string().min(1),
+  age: z.number().int().min(1),
+  gender: z.string().min(1),
+  height: z.number().positive(),
+  weight: z.number().positive(),
+  location: z.string().min(1),
+  bodyType: z.string().min(1),
+  appetite: z.string().min(1),
+  digestion: z.string().min(1),
+  sleepQuality: z.number().int().min(1).max(10),
+  stressLevel: z.number().int().min(1).max(10),
+  wakeUpTime: z.string().min(1),
+  sleepTime: z.string().min(1),
+  exercise: z.string().min(1),
+  foodType: z.string().min(1),
+  junkFoodFreq: z.string().min(1),
+  waterIntake: z.number().positive(),
+  doshaAnswers: z.array(z.boolean()).length(12),
+});
+
+const vataIndexes = [0, 1, 4, 5, 10];
+const pittaIndexes = [2, 3, 8, 11];
+const kaphaIndexes = [1, 5, 6, 7, 9];
+
+function calculateDosha(answers: boolean[]) {
+  const scores = {
+    vata: vataIndexes.filter((index) => answers[index]).length,
+    pitta: pittaIndexes.filter((index) => answers[index]).length,
+    kapha: kaphaIndexes.filter((index) => answers[index]).length,
+  };
+
+  const total = scores.vata + scores.pitta + scores.kapha || 1;
+
+  const vataPercent = Math.round((scores.vata / total) * 100);
+  const pittaPercent = Math.round((scores.pitta / total) * 100);
+  const kaphaPercent = Math.max(0, 100 - vataPercent - pittaPercent);
+
+  return {
+    vata: vataPercent,
+    pitta: pittaPercent,
+    kapha: kaphaPercent,
+  };
+}
+
+function calculateHealthMetrics(profile: z.infer<typeof profileSchema>): HealthMetricsPayload {
+  const digestScore = Math.min(100, Math.max(40, 70 + (10 - profile.stressLevel) * 2));
+  const sleepScore = Math.min(100, Math.max(30, profile.sleepQuality * 10));
+  const stressScore = Math.min(100, Math.max(20, (10 - profile.stressLevel) * 8));
+
+  let fitnessScore = 60;
+  switch (profile.exercise) {
+    case 'daily':
+      fitnessScore = 90;
+      break;
+    case '4x/week':
+      fitnessScore = 75;
+      break;
+    case '2x/week':
+      fitnessScore = 65;
+      break;
+    case 'none':
+      fitnessScore = 50;
+      break;
+    default:
+      fitnessScore = 60;
+  }
+
+  const gastricRisk = (profile.digestion === 'excellent' ? 'low' : profile.digestion === 'normal' ? 'medium' : 'high');
+  const obesityRisk = (profile.bodyType === 'slim' ? 'low' : profile.bodyType === 'athletic' ? 'medium' : 'high');
+  const diabetesRisk = (profile.exercise === 'daily' ? 'low' : profile.exercise === 'none' ? 'high' : 'medium');
+
+  return {
+    digestScore,
+    sleepScore,
+    stressScore,
+    fitnessScore,
+    gastricRisk: gastricRisk as HealthMetricsPayload['gastricRisk'],
+    obesityRisk: obesityRisk as HealthMetricsPayload['obesityRisk'],
+    diabetesRisk: diabetesRisk as HealthMetricsPayload['diabetesRisk'],
+  };
+}
+
+function serializeProfile(profile: Awaited<ReturnType<typeof upsertProfile>>) {
+  return {
+    ...profile,
+    _id: profile._id?.toString(),
+    userId: profile.userId.toString(),
+    createdAt: profile.createdAt.toISOString(),
+    updatedAt: profile.updatedAt.toISOString(),
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const {
-      userId,
-      name,
-      age,
-      gender,
-      height,
-      weight,
-      location,
-      bodyType,
-      appetite,
-      digestion,
-      sleepQuality,
-      stressLevel,
-      wakeUpTime,
-      sleepTime,
-      exercise,
-      foodType,
-      junkFoodFreq,
-      waterIntake,
-      doshaAnswers,
-    } = body;
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    // Validate required fields
-    if (!userId || !name || !age) {
+    const body = await request.json();
+    const parsed = profileSchema.safeParse(body);
+
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Invalid profile data', details: parsed.error.flatten() },
         { status: 400 }
       );
     }
 
-    // Mock response - in production, save to MongoDB
-    const mockProfile = {
-      _id: userId,
-      userId,
-      name,
-      age,
-      gender,
-      height,
-      weight,
-      location,
-      bodyType,
-      appetite,
-      digestion,
-      sleepQuality,
-      stressLevel,
-      wakeUpTime,
-      sleepTime,
-      exercise,
-      foodType,
-      junkFoodFreq,
-      waterIntake,
-      doshaAnswers,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    const dosha = calculateDosha(parsed.data.doshaAnswers);
+
+    const profilePayload: ProfilePayload = {
+      ...parsed.data,
+      dosha,
     };
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'Profile saved successfully',
-        data: mockProfile,
+    const profile = await upsertProfile(session.user.id, profilePayload);
+
+    const metricsPayload = calculateHealthMetrics(parsed.data);
+    const metrics = await upsertHealthMetrics(session.user.id, metricsPayload);
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        profile: serializeProfile(profile),
+        metrics: {
+          ...metricsPayload,
+          recordedAt: metrics.recordedAt.toISOString(),
+          updatedAt: metrics.updatedAt.toISOString(),
+        },
       },
-      { status: 200 }
-    );
+    });
   } catch (error) {
     console.error('Error saving profile:', error);
     return NextResponse.json(
@@ -79,43 +154,18 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'userId is required' },
-        { status: 400 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Mock response - in production, fetch from MongoDB
-    const mockProfile = {
-      _id: userId,
-      userId,
-      name: 'John Doe',
-      age: 28,
-      gender: 'male',
-      height: 175,
-      weight: 75,
-      location: 'New York',
-      bodyType: 'athletic',
-      appetite: 'moderate',
-      digestion: 'normal',
-      sleepQuality: 7,
-      stressLevel: 5,
-      wakeUpTime: '06:30',
-      sleepTime: '22:00',
-      exercise: '4x/week',
-      foodType: 'mixed',
-      junkFoodFreq: 'weekly',
-      waterIntake: 8,
-      doshaAnswers: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    const profile = await getProfileByUserId(session.user.id);
 
-    return NextResponse.json(mockProfile, { status: 200 });
+    if (!profile) {
+      return NextResponse.json({ data: null }, { status: 200 });
+    }
+
+    return NextResponse.json({ data: serializeProfile(profile) });
   } catch (error) {
     console.error('Error fetching profile:', error);
     return NextResponse.json(
