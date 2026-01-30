@@ -3,10 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { MultiStepProfileForm, ProfileData } from '@/components/forms/MultiStepProfileForm';
 import { useState } from 'react';
-import { Button } from '@/components/ui/Button';
-import { DarkModeToggle } from '@/components/ui/DarkModeToggle';
 import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
+import { AuthHeader } from '@/components/ui/AuthHeader';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -108,22 +107,8 @@ export default function ProfilePage() {
 
   return (
     <div className="relative">
-      {/* Dark Mode Toggle */}
-      <div className="fixed top-6 right-6 z-50">
-        <DarkModeToggle />
-      </div>
+      <AuthHeader />
 
-      {/* Back to Home Button */}
-      <div className="fixed top-6 left-6 z-50">
-        <Button 
-          variant="secondary" 
-          size="sm"
-          onClick={() => router.push('/')}
-        >
-          ← Home
-        </Button>
-      </div>
-      
       {error && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 w-full max-w-md">
           <div className="rounded-xl bg-red-100 dark:bg-red-900/40 border border-red-300 dark:border-red-700 px-4 py-3 text-sm text-red-700 dark:text-red-200 shadow-lg">

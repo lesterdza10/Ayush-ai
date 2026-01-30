@@ -4,13 +4,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Home, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { GlassmorphismCard } from '@/components/ui/GlassmorphismCard';
 import { HealthScoreCard } from '@/components/ui/HealthScoreCard';
 import { RiskIndicatorCard } from '@/components/ui/RiskIndicatorCard';
 import { Button } from '@/components/ui/Button';
-import { DarkModeToggle } from '@/components/ui/DarkModeToggle';
+import { AuthHeader } from '@/components/ui/AuthHeader';
 
 type RiskLevel = 'low' | 'medium' | 'high';
 
@@ -294,20 +294,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-cyan-50/50 via-blue-50/30 to-green-50/50 dark:from-slate-950 dark:via-slate-900/50 dark:to-slate-900/30 p-6 md:p-12 transition-colors duration-300">
-      <div className="fixed top-6 left-6 z-50">
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => router.push('/')}
-        >
-          <Home className="w-4 h-4 mr-2" />
-          Home
-        </Button>
-      </div>
-
-      <div className="fixed top-6 right-6 z-50">
-        <DarkModeToggle />
-      </div>
+      <AuthHeader />
 
       <div className="max-w-7xl mx-auto">
         {error && (
