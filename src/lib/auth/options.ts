@@ -22,21 +22,35 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user, account }) {
       if (user && account && user.email) {
-        const storedUser = await upsertUser({
-          email: user.email,
-          name: user.name ?? null,
-          image: user.image ?? null,
-          provider: account.provider,
-          providerAccountId: account.providerAccountId,
-        });
+        try {
+          console.log('JWT callback - attempting to save user to MongoDB');
+          console.log('MONGODB_URI exists:', !!process.env.MONGODB_URI);
+          
+          const storedUser = await upsertUser({
+            email: user.email,
+            name: user.name ?? null,
+            image: user.image ?? null,
+            provider: account.provider,
+            providerAccountId: account.providerAccountId,
+          });
 
-        if (storedUser._id) {
-          token.userId = storedUser._id.toString();
+          if (storedUser._id) {
+            token.userId = storedUser._id.toString();
+            console.log('JWT callback - userId set:', token.userId);
+          }
+        } catch (error) {
+          console.error('JWT callback - MongoDB error:', error);
+          console.error('Error details:', error instanceof Error ? error.message : error);
+          // Don't throw - allow login to continue without userId
         }
       } else if (!token.userId && token.email) {
-        const existingUser = await getUserByEmail(token.email);
-        if (existingUser?._id) {
-          token.userId = existingUser._id.toString();
+        try {
+          const existingUser = await getUserByEmail(token.email);
+          if (existingUser?._id) {
+            token.userId = existingUser._id.toString();
+          }
+        } catch (error) {
+          console.error('JWT callback - getUserByEmail error:', error);
         }
       }
 
