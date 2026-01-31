@@ -7,21 +7,26 @@ if (!uri) {
   throw new Error('Missing MONGODB_URI environment variable');
 }
 
-let cachedDb: Db | null = null;
-
 declare global {
-  // eslint-disable-next-line no-var
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
-const client = new MongoClient(uri, {
-  maxPoolSize: 10,
-});
+let client: MongoClient;
+let clientPromise: Promise<MongoClient>;
 
-const clientPromise = global._mongoClientPromise ?? client.connect();
-
-if (process.env.NODE_ENV !== 'production') {
-  global._mongoClientPromise = clientPromise;
+if (process.env.NODE_ENV === 'development') {
+  if (!global._mongoClientPromise) {
+    client = new MongoClient(uri, { maxPoolSize: 10 });
+    global._mongoClientPromise = client.connect();
+  }
+  clientPromise = global._mongoClientPromise;
+} else {
+  client = new MongoClient(uri, {
+    maxPoolSize: 10,
+    connectTimeoutMS: 10000,
+    socketTimeoutMS: 45000,
+  });
+  clientPromise = client.connect();
 }
 
 export async function getMongoClient(): Promise<MongoClient> {
@@ -29,11 +34,6 @@ export async function getMongoClient(): Promise<MongoClient> {
 }
 
 export async function getDb(dbName = defaultDbName): Promise<Db> {
-  if (cachedDb) {
-    return cachedDb;
-  }
-
   const mongoClient = await getMongoClient();
-  cachedDb = mongoClient.db(dbName);
-  return cachedDb;
+  return mongoClient.db(dbName);
 }
