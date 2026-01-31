@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { GlassmorphismCard } from '@/components/ui/GlassmorphismCard';
 import { DarkModeToggle } from '@/components/ui/DarkModeToggle';
 import { useEffect, useState } from 'react';
+import { ChatBot } from '@/components/ui/ChatBot';
 
 export default function Home() {
   const router = useRouter();
@@ -159,6 +160,7 @@ export default function Home() {
           animate="visible"
           className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-20"
         >
+          <ChatBot />
           {features.map((feature, index) => (
             <motion.div key={index} variants={itemVariants}>
               <GlassmorphismCard hover className="p-8 h-full">
