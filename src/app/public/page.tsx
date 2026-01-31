@@ -6,11 +6,12 @@ import { GlassmorphismCard } from '@/components/ui/GlassmorphismCard';
 import { Button } from '@/components/ui/Button';
 import { Bell, Clock, Info } from 'lucide-react';
 import Image from 'next/image';
+import {useRouter} from 'next/navigation';
 
 export default function YogaDashboard() {
   const [reminderTime, setReminderTime] = useState('');
   const [isNotified, setIsNotified] = useState(false);
-
+  const router = useRouter();
   // Request Notification Permission on Load
   useEffect(() => {
     if ("Notification" in window) {
@@ -97,10 +98,14 @@ export default function YogaDashboard() {
                   ))}
                 </div>
               </div>
-
-              <Button variant="secondary" size="sm" className="w-full mt-auto">
-                View Full Details
-              </Button>
+        <Button 
+        variant="secondary" 
+        size="sm" 
+        className="w-full mt-auto"
+        onClick={() => router.push(`/yoga/${yoga.id}`)} // This must match the folder name
+>
+  View Full Details
+</Button>
             </div>
           </GlassmorphismCard>
         ))}
