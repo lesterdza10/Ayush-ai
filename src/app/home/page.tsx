@@ -147,7 +147,7 @@ export default function Home() {
             <Button
               size="lg"
               variant="secondary"
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/public')}
             >
               Go to Dashboard
             </Button>
