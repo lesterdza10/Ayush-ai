@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Bell, Clock, Info } from 'lucide-react';
 import Image from 'next/image';
 import {useRouter} from 'next/navigation';
+import VitalsTracker, { StreakCounter } from '@/app/dashboard/VitalsTracker';
 
 export default function YogaDashboard() {
   const [reminderTime, setReminderTime] = useState('');
@@ -72,6 +73,7 @@ export default function YogaDashboard() {
         </div>
       </GlassmorphismCard>
 
+      
       {/* Yoga Library */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {yogaExercises.map((yoga) => (
